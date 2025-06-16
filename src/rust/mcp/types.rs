@@ -1,3 +1,4 @@
+use chrono;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
@@ -25,7 +26,9 @@ pub struct JiyiRequest {
     #[schemars(description = "记忆内容（记忆操作时必需）")]
     #[serde(default)]
     pub content: String,
-    #[schemars(description = "记忆分类：rule(规范规则), preference(用户偏好), pattern(最佳实践), context(项目上下文)")]
+    #[schemars(
+        description = "记忆分类：rule(规范规则), preference(用户偏好), pattern(最佳实践), context(项目上下文)"
+    )]
     #[serde(default = "default_category")]
     pub category: String,
 }
@@ -51,7 +54,7 @@ pub struct McpResponse {
     pub metadata: ResponseMetadata,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ImageAttachment {
     pub data: String,
     pub media_type: String,
@@ -80,4 +83,51 @@ pub struct ImageSource {
     pub source_type: String,
     pub media_type: String,
     pub data: String,
+}
+
+/// 统一的响应构建函数
+///
+/// 用于生成标准的JSON响应格式，确保无GUI和有GUI模式输出一致
+pub fn build_mcp_response(
+    user_input: Option<String>,
+    selected_options: Vec<String>,
+    images: Vec<ImageAttachment>,
+    request_id: Option<String>,
+    source: &str,
+) -> serde_json::Value {
+    serde_json::json!({
+        "user_input": user_input,
+        "selected_options": selected_options,
+        "images": images,
+        "metadata": {
+            "timestamp": chrono::Utc::now().to_rfc3339(),
+            "request_id": request_id,
+            "source": source
+        }
+    })
+}
+
+/// 构建发送操作的响应
+pub fn build_send_response(
+    user_input: Option<String>,
+    selected_options: Vec<String>,
+    images: Vec<ImageAttachment>,
+    request_id: Option<String>,
+    source: &str,
+) -> String {
+    let response = build_mcp_response(user_input, selected_options, images, request_id, source);
+    response.to_string()
+}
+
+/// 构建继续操作的响应
+pub fn build_continue_response(request_id: Option<String>, source: &str) -> String {
+    // 动态获取继续提示词
+    let continue_prompt = if let Ok(config) = crate::config::load_standalone_config() {
+        config.reply_config.continue_prompt
+    } else {
+        "请按照最佳实践继续".to_string()
+    };
+
+    let response = build_mcp_response(Some(continue_prompt), vec![], vec![], request_id, source);
+    response.to_string()
 }

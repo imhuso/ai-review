@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AudioSettings from '../settings/AudioSettings.vue'
 import ReplySettings from '../settings/ReplySettings.vue'
+import TelegramSettings from '../settings/TelegramSettings.vue'
 import ThemeSettings from '../settings/ThemeSettings.vue'
 import WindowSettings from '../settings/WindowSettings.vue'
 
@@ -63,6 +64,9 @@ function handleWindowSizeUpdate(size: { width: number, height: number, fixed: bo
         @stop-audio="$emit('stopAudio')"
         @test-audio-error="$emit('testAudioError', $event)"
       />
+
+      <!-- Telegram设置组件 -->
+      <TelegramSettings />
     </n-space>
   </div>
 </template>

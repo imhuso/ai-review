@@ -194,6 +194,21 @@ function reset() {
   emitUpdate()
 }
 
+// 更新数据（用于外部同步）
+function updateData(data: { userInput?: string, selectedOptions?: string[], draggedImages?: string[] }) {
+  if (data.userInput !== undefined) {
+    userInput.value = data.userInput
+  }
+  if (data.selectedOptions !== undefined) {
+    selectedOptions.value = data.selectedOptions
+  }
+  if (data.draggedImages !== undefined) {
+    uploadedImages.value = data.draggedImages
+  }
+
+  emitUpdate()
+}
+
 // 移除了文件选择和测试图片功能
 
 // 暴露方法给父组件
@@ -201,6 +216,7 @@ defineExpose({
   reset,
   canSubmit,
   statusText,
+  updateData,
 })
 </script>
 

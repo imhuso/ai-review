@@ -71,16 +71,52 @@ async function handleMcpCancel() {
 
 // 显示MCP弹窗
 async function showMcpDialog(request: any) {
-  // 同时设置请求数据和显示状态，避免中间状态
-  mcpRequest.value = request
-  showMcpPopup.value = true
+  // 获取Telegram配置，检查是否需要隐藏前端弹窗
+  let shouldShowFrontendPopup = true
+  try {
+    const telegramConfig = await invoke('get_telegram_config')
+    // 如果Telegram启用且配置了隐藏前端弹窗，则不显示前端弹窗
+    if (telegramConfig && (telegramConfig as any).enabled && (telegramConfig as any).hide_frontend_popup) {
+      shouldShowFrontendPopup = false
+      console.log('🔕 根据Telegram配置，隐藏前端弹窗')
+    }
+  }
+  catch (error) {
+    console.error('获取Telegram配置失败:', error)
+    // 配置获取失败时，保持默认行为（显示弹窗）
+  }
 
-  // 播放音频通知
+  // 根据配置决定是否显示前端弹窗
+  if (shouldShowFrontendPopup) {
+    // 设置请求数据和显示状态
+    mcpRequest.value = request
+    showMcpPopup.value = true
+    console.log('✅ 显示前端弹窗')
+  } else {
+    console.log('🔕 跳过前端弹窗显示，仅使用Telegram交互')
+  }
+
+  // 播放音频通知（无论是否显示弹窗都播放）
   try {
     await invoke('play_notification_sound')
   }
   catch (error) {
-    console.error('显示MCP弹窗失败:', error)
+    console.error('播放音频通知失败:', error)
+  }
+
+  // 启动Telegram同步（无论是否显示弹窗都启动）
+  try {
+    if (request?.message) {
+      await invoke('start_telegram_sync', {
+        message: request.message,
+        predefinedOptions: request.predefined_options || [],
+        isMarkdown: request.is_markdown || false
+      })
+      console.log('✅ Telegram同步启动成功')
+    }
+  }
+  catch (error) {
+    console.error('启动Telegram同步失败:', error)
   }
 }
 
@@ -117,6 +153,8 @@ async function setupMcpEventListener() {
   }
 }
 
+// 注意：Telegram事件监听已移到McpPopup组件中，避免冲突
+
 // 处理消息实例就绪
 function handleMessageReady(message: any) {
   settings.setMessageInstance(message)
@@ -145,6 +183,8 @@ onMounted(async () => {
     await setupMcpEventListener()
   }
 
+  // 注意：Telegram事件监听已移到McpPopup组件中
+
   // 监听系统主题变化
   setupSystemThemeListener()
 
@@ -159,24 +199,14 @@ onMounted(async () => {
       <n-message-provider>
         <n-notification-provider>
           <n-dialog-provider>
-            <AppContent
-            :mcp-request="mcpRequest"
-            :show-mcp-popup="showMcpPopup"
-            :app-config="appConfig"
-            :is-initializing="isInitializing"
-            @mcp-response="handleMcpResponse"
-            @mcp-cancel="handleMcpCancel"
-            @theme-change="setTheme"
-            @toggle-always-on-top="settingsActions.toggleAlwaysOnTop"
-            @toggle-audio-notification="settingsActions.toggleAudioNotification"
-            @update-audio-url="settingsActions.updateAudioUrl"
-            @test-audio="settingsActions.testAudio"
-            @stop-audio="settingsActions.stopAudio"
-            @test-audio-error="handleTestAudioError"
-            @update-window-size="settingsActions.updateWindowSize"
-            @update-reply-config="settingsActions.updateReplyConfig"
-            @message-ready="handleMessageReady"
-            />
+            <AppContent :mcp-request="mcpRequest" :show-mcp-popup="showMcpPopup" :app-config="appConfig"
+              :is-initializing="isInitializing" @mcp-response="handleMcpResponse" @mcp-cancel="handleMcpCancel"
+              @theme-change="setTheme" @toggle-always-on-top="settingsActions.toggleAlwaysOnTop"
+              @toggle-audio-notification="settingsActions.toggleAudioNotification"
+              @update-audio-url="settingsActions.updateAudioUrl" @test-audio="settingsActions.testAudio"
+              @stop-audio="settingsActions.stopAudio" @test-audio-error="handleTestAudioError"
+              @update-window-size="settingsActions.updateWindowSize"
+              @update-reply-config="settingsActions.updateReplyConfig" @message-ready="handleMessageReady" />
           </n-dialog-provider>
         </n-notification-provider>
       </n-message-provider>

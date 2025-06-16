@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use std::sync::Mutex;
 use std::collections::HashMap;
+use std::sync::Mutex;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AppConfig {
@@ -12,6 +12,8 @@ pub struct AppConfig {
     pub reply_config: ReplyConfig, // 继续回复配置
     #[serde(default = "default_mcp_config")]
     pub mcp_config: McpConfig, // MCP工具配置
+    #[serde(default = "default_telegram_config")]
+    pub telegram_config: TelegramConfig, // Telegram Bot配置
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -84,7 +86,17 @@ pub struct McpConfig {
     pub tools: HashMap<String, bool>, // MCP工具启用状态
 }
 
-
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TelegramConfig {
+    #[serde(default = "default_telegram_enabled")]
+    pub enabled: bool, // 是否启用Telegram Bot
+    #[serde(default = "default_telegram_bot_token")]
+    pub bot_token: String, // Bot Token
+    #[serde(default = "default_telegram_chat_id")]
+    pub chat_id: String, // Chat ID
+    #[serde(default = "default_telegram_hide_frontend_popup")]
+    pub hide_frontend_popup: bool, // 是否隐藏前端弹窗，仅使用Telegram交互
+}
 
 #[derive(Debug)]
 pub struct AppState {
@@ -99,6 +111,7 @@ impl Default for AppConfig {
             audio_config: default_audio_config(),
             reply_config: default_reply_config(),
             mcp_config: default_mcp_config(),
+            telegram_config: default_telegram_config(),
         }
     }
 }
@@ -131,6 +144,15 @@ pub fn default_audio_config() -> AudioConfig {
 pub fn default_mcp_config() -> McpConfig {
     McpConfig {
         tools: default_mcp_tools(),
+    }
+}
+
+pub fn default_telegram_config() -> TelegramConfig {
+    TelegramConfig {
+        enabled: default_telegram_enabled(),
+        bot_token: default_telegram_bot_token(),
+        chat_id: default_telegram_chat_id(),
+        hide_frontend_popup: default_telegram_hide_frontend_popup(),
     }
 }
 
@@ -207,8 +229,8 @@ pub fn default_continue_prompt() -> String {
 
 pub fn default_mcp_tools() -> HashMap<String, bool> {
     let mut tools = HashMap::new();
-    tools.insert("zhi".to_string(), true);    // 寸止工具默认启用
-    tools.insert("ji".to_string(), true);     // 记忆管理工具默认启用
+    tools.insert("zhi".to_string(), true); // 寸止工具默认启用
+    tools.insert("ji".to_string(), true); // 记忆管理工具默认启用
     tools
 }
 
@@ -238,6 +260,22 @@ pub fn default_free_width() -> f64 {
 
 pub fn default_free_height() -> f64 {
     900.0
+}
+
+pub fn default_telegram_enabled() -> bool {
+    false // 默认关闭Telegram Bot
+}
+
+pub fn default_telegram_bot_token() -> String {
+    "".to_string() // 默认为空
+}
+
+pub fn default_telegram_chat_id() -> String {
+    "".to_string() // 默认为空
+}
+
+pub fn default_telegram_hide_frontend_popup() -> bool {
+    false // 默认不隐藏前端弹窗，保持现有行为
 }
 
 impl WindowConfig {

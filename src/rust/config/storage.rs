@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::fs;
 use std::path::PathBuf;
-use tauri::{AppHandle, State, Manager, LogicalSize};
+use tauri::{AppHandle, LogicalSize, Manager, State};
 
 use super::settings::{AppConfig, AppState};
 
@@ -12,17 +12,20 @@ pub fn get_config_path(_app: &AppHandle) -> Result<PathBuf> {
 
 pub async fn save_config(state: &State<'_, AppState>, app: &AppHandle) -> Result<()> {
     let config_path = get_config_path(app)?;
-    
+
     // 确保目录存在
     if let Some(parent) = config_path.parent() {
         fs::create_dir_all(parent)?;
     }
-    
-    let config = state.config.lock().map_err(|e| anyhow::anyhow!("获取配置失败: {}", e))?;
+
+    let config = state
+        .config
+        .lock()
+        .map_err(|e| anyhow::anyhow!("获取配置失败: {}", e))?;
     let config_json = serde_json::to_string_pretty(&*config)?;
-    
+
     fs::write(config_path, config_json)?;
-    
+
     Ok(())
 }
 
@@ -34,7 +37,9 @@ pub async fn load_config(state: &State<'_, AppState>, app: &AppHandle) -> Result
         let config_json = fs::read_to_string(config_path)?;
         let config: AppConfig = serde_json::from_str(&config_json)?;
 
-        let mut config_guard = state.config.lock()
+        let mut config_guard = state
+            .config
+            .lock()
             .map_err(|e| anyhow::anyhow!("获取配置锁失败: {}", e))?;
         *config_guard = config;
     }
@@ -42,15 +47,23 @@ pub async fn load_config(state: &State<'_, AppState>, app: &AppHandle) -> Result
     Ok(())
 }
 
-pub async fn load_config_and_apply_window_settings(state: &State<'_, AppState>, app: &AppHandle) -> Result<()> {
+pub async fn load_config_and_apply_window_settings(
+    state: &State<'_, AppState>,
+    app: &AppHandle,
+) -> Result<()> {
     // 先加载配置
     load_config(state, app).await?;
 
     // 然后应用窗口设置
     let (always_on_top, window_config) = {
-        let config = state.config.lock()
+        let config = state
+            .config
+            .lock()
             .map_err(|e| anyhow::anyhow!("获取配置失败: {}", e))?;
-        (config.ui_config.always_on_top, config.ui_config.window_config.clone())
+        (
+            config.ui_config.always_on_top,
+            config.ui_config.window_config.clone(),
+        )
     };
 
     // 应用到窗口
@@ -92,6 +105,12 @@ pub fn load_standalone_config() -> Result<AppConfig> {
         // 如果配置文件不存在，返回默认配置
         Ok(AppConfig::default())
     }
+}
+
+/// 独立加载Telegram配置（用于MCP模式下的配置检查）
+pub fn load_standalone_telegram_config() -> Result<super::settings::TelegramConfig> {
+    let config = load_standalone_config()?;
+    Ok(config.telegram_config)
 }
 
 /// 获取独立配置文件路径（不依赖Tauri）
